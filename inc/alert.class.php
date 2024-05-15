@@ -353,97 +353,117 @@ class PluginNewsAlert extends CommonDBTM {
    }
 
    public function showForm($ID, $options = []) {
-      $this->initForm($ID, $options);
-
       $canedit = $this->can($ID, UPDATE);
 
-      if ($this->getField('message') == NOT_AVAILABLE) {
-         $this->fields['message'] = "";
-      }
-
-      $this->showFormHeader($options);
-
-      echo "<tr  class='tab_bg_1'>";
-      echo '<td style="width: 150px">' . __('Name') .'</td>';
-      echo '<td colspan="3"><input name="name" type="text" value="'.Html::cleanInputText($this->getField('name')).'" style="width: 565px" /></td>';
-      echo '</tr>';
-
-      echo "<tr class='tab_bg_1'><td>".__('Active')."</td><td colspan='3'>";
-      Dropdown::showYesNo("is_active", $this->fields["is_active"]);
-      echo "</td></tr>";
-
-      echo '<tr>';
-      echo '<td>' . __('Description') .'</td>';
-      echo '<td colspan="3">';
-      echo '<textarea name="message" rows="12" cols="80">'.$this->getField('message').'</textarea>';
-      Html::initEditorSystem('message');
-      echo '</td>';
-      echo '</tr>';
-
-      echo '<tr>';
-      echo '<td style="width: 150px">' . __("Visibility start date") .'</td>';
-      echo '<td>';
-      Html::showDateTimeField("date_start",
-                              ['value'      => $this->fields["date_start"],
-                               'timestep'   => 1,
-                               'maybeempty' => true,
-                               'canedit'    => $canedit]);
-      echo '</td>';
-      echo '<td style="width: 150px">' . __("Visibility end date") .'</td>';
-      echo '<td>';
-      Html::showDateTimeField("date_end",
-                              ['value'      => $this->fields["date_end"],
-                               'timestep'   => 1,
-                               'maybeempty' => true,
-                               'canedit'    => $canedit]);
-      echo '</td>';
-      echo '</tr>';
-
-      echo '<tr>';
-      echo '<td>' . __("Type (to add an icon before alert title)", 'news') .'</td>';
-      echo '<td>';
-      Dropdown::showFromArray('type', self::getTypes(),
-                              ['value'               => $this->fields['type'],
-                               'display_emptychoice' => true]);
-      echo '</td>';
-
-      echo '<td>' . __("Can close alert", 'news') .'</td>';
-      echo '<td>';
-      Dropdown::showYesNo('is_close_allowed', $this->fields['is_close_allowed']);
-      echo '</td>';
-
-      echo '</tr>';
-
-      echo '<tr>';
-      if (Session::haveRight('is_displayed_onlogin', READ)) {
-         echo '<td>' . __("Show on login page", 'news') .'</td>';
-         echo '<td>';
-         Dropdown::showYesNo('is_displayed_onlogin', $this->fields['is_displayed_onlogin'], -1, [
-            'readonly' => !Session::haveRight('is_displayed_onlogin', UPDATE)
-         ]);
-         echo '</td>';
-      }
-      if (Session::haveRight('is_displayed_onhelpdesk', READ)) {
-          echo '<td>' . __("Show on helpdesk page", 'news') .'</td>';
-          echo '<td>';
-          Dropdown::showYesNo('is_displayed_onhelpdesk', $this->fields['is_displayed_onhelpdesk'], -1, [
-            'readonly' => !Session::haveRight('is_displayed_onhelpdesk', UPDATE)
-          ]);
-          echo '</td>';
-      }
-      echo '</tr>';
-
-      echo '<tr>';
-      if (Session::haveRight('is_displayed_oncentral', READ)) {
-         echo '<td>' . __("Show on central page", 'news') .'</td>';
-         echo '<td>';
-         Dropdown::showYesNo('is_displayed_oncentral', $this->fields['is_displayed_oncentral'], -1, [
-            'readonly' => !Session::haveRight('is_displayed_oncentral', UPDATE)
-         ]);
-         echo '</td>';
-      }
-
-      $this->showFormButtons($options);
+      $form = [
+        'action' => $this->getFormURL(),
+        'buttons' => !$canedit ? [] : [
+            $this->fields["is_deleted"] == 1 && self::canDelete() ? [
+               'type' => 'submit',
+               'name' => 'restore',
+               'value' => __('Restore'),
+               'class' => 'btn btn-secondary'
+            ] : ($this->canUpdateItem() ? [
+               'type' => 'submit',
+               'name' => $this->isNewID($ID) ? 'add' : 'update',
+               'value' => $this->isNewID($ID) ? __('Add') : __('Update'),
+               'class' => 'btn btn-secondary'
+            ] : []),
+            !$this->isNewID($ID) && !$this->isDeleted() && $this->canDeleteItem() ? [
+               'type' => 'submit',
+               'name' => 'delete',
+               'value' => __('Put in trashbin'),
+               'class' => 'btn btn-danger'
+            ] : (!$this->isNewID($ID) && self::canPurge() ? [
+               'type' => 'submit',
+               'name' => 'purge',
+               'value' => __('Delete permanently'),
+               'class' => 'btn btn-danger'
+            ] : []),
+        ],
+        'content' => [
+            $this->getTypeName() => [
+                'visible' => true,
+                'inputs' => [
+                    __('Name') => [
+                        'type' => 'text',
+                        'name' => 'name',
+                        'value' => $this->fields['name'],
+                        'size' => 100,
+                        'required' => true,
+                        'col_lg' => 8,
+                        'col_md' => 8,
+                    ],
+                    __('Active') => [
+                        'type' => 'checkbox',
+                        'name' => 'is_active',
+                        'value' => $this->fields['is_active'],
+                        'col_lg' => 4,
+                        'col_md' => 4,
+                    ],
+                    __('Description') => [
+                        'type' => 'richtextarea',
+                        'name' => 'message',
+                        'value' => $this->fields['message'],
+                        'required' => true,
+                        'rows' => 6,
+                        'cols' => 80,
+                        'editor' => true,
+                        'col_lg' => 12,
+                        'col_md' => 12,
+                    ],
+                    __('Visibility start date') => [
+                        'type' => 'date',
+                        'name' => 'date_start',
+                        'value' => $this->fields['date_start'],
+                        'col_lg' => 6,
+                        'col_md' => 6,
+                    ],
+                    __('Visibility end date') => [
+                        'type' => 'date',
+                        'name' => 'date_end',
+                        'value' => $this->fields['date_end'],
+                        'col_lg' => 6,
+                        'col_md' => 6,
+                    ],
+                    __('Type (to add an icon before alert title)', 'news') => [
+                        'type' => 'select',
+                        'name' => 'type',
+                        'value' => $this->fields['type'],
+                        'values' => self::getTypes(),
+                        'col_lg' => 6,
+                        'col_md' => 6,
+                    ],
+                    __('Can close alert', 'news') => [
+                        'type' => 'checkbox',
+                        'name' => 'is_close_allowed',
+                        'value' => $this->fields['is_close_allowed'],
+                        'col_lg' => 6,
+                        'col_md' => 6,
+                    ],
+                    __('Show on login page', 'news') => (Session::haveRight('is_displayed_onlogin', READ)) ? [
+                        'type' => 'checkbox',
+                        'name' => 'is_displayed_onlogin',
+                        'value' => $this->fields['is_displayed_onlogin'],
+                       !Session::haveRight('is_displayed_onlogin', UPDATE) ? 'disabled' : '' => true,
+                    ] : [],
+                    __('Show on helpdesk page', 'news') => (Session::haveRight('is_displayed_onhelpdesk', READ)) ? [
+                        'type' => 'checkbox',
+                        'name' => 'is_displayed_onhelpdesk',
+                        'value' => $this->fields['is_displayed_onhelpdesk'],
+                       !Session::haveRight('is_displayed_onhelpdesk', UPDATE) ? 'disabled' : '' => true,
+                    ] : [],
+                    __('Show on central page', 'news') => (Session::haveRight('is_displayed_oncentral', READ)) ? [
+                        'type' => 'checkbox',
+                        'name' => 'is_displayed_oncentral',
+                        'value' => $this->fields['is_displayed_oncentral'],
+                       !Session::haveRight('is_displayed_oncentral', UPDATE) ? 'disabled' : '' => true,
+                    ] : [],
+                ]
+            ]
+        ]
+      ];
+      renderTwigForm($form, '', $this->fields);
    }
 
    static function displayOnCentral() {

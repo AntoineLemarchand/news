@@ -38,10 +38,11 @@
 .plugin_news_alert-title {
    font-size: 18px;
    padding: 5px;
-   min-height: 45px;
+   min-height: 55px;
 }
 
 .plugin_news_alert-content {
+   width: 100%;
    word-break: normal;
    padding: 5px 15px;
    border: none;
